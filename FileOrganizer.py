@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 import shutil
 
 FilesExtension = {
@@ -30,57 +29,49 @@ FilesExtension = {
     "py": "Python"
 }
 
-sign = "-"
-sepreator = '\n' + sign * 150 + '\n'
+separator = '\n' + '-' * 150 + '\n'
 
-Current_Working_Directory = os.getcwd()
+def scan_directory(directory):
+    files = [entry.name for entry in os.scandir(directory) if entry.is_file()]
+    return files
 
-def scan_directory():
-    print("Scanning Directory...", end=sepreator)
-    Files = [entry.name for entry in os.scandir(Current_Working_Directory) if entry.is_file()]
-    return Files
+def organize_files(directory, files_extension_mapping):
+    files = scan_directory(directory)
+    if not files:
+        return "No files found to organize."
 
-print("Are you sure you want to organize this directory?")
-print(Current_Working_Directory)
-print("Write Yes or No")
-flag = input().strip().lower() in ["yes", "y", "1"]
-
-if flag:
-    moved_files_count = 0
-    while True:
-        Files = scan_directory()
-        print("Files found:", Files, end=sepreator)
-        
-        if len(Files) == 0:
-            print("No files found. Operation aborted.")
-            break
+    extensions = {file.split('.')[-1] for file in files if '.' in file}
+    for ext in extensions:
+        if ext in files_extension_mapping:
+            os.makedirs(os.path.join(directory, files_extension_mapping[ext]), exist_ok=True)
         else:
-            Extensions = set([file.split('.')[-1] for file in Files if '.' in file])
-            print("File Extensions Found:", Extensions, end=sepreator)
-            
-            for ext in Extensions:
-                if ext in FilesExtension:
-                    os.makedirs(FilesExtension[ext], exist_ok=True)
-                else:
-                    print(f"Warning: No folder category defined for the '{ext}' extension.")
-            
-            for File in Files:
-                exet = File.split('.')[-1]
-                destination_folder = FilesExtension.get(exet, "Miscilanious")
+            print(f"Warning: No folder category defined for the '{ext}' extension.")
 
-                if destination_folder != "Miscilanious":
-                    os.makedirs(destination_folder, exist_ok=True)
+    moved_files_count = 0
+    for file in files:
+        ext = file.split('.')[-1]
+        destination_folder = files_extension_mapping.get(ext, "Miscilanious")
+        full_destination_folder = os.path.join(directory, destination_folder)
+        os.makedirs(full_destination_folder, exist_ok=True)
+        source_path = os.path.join(directory, file)
+        destination_path = os.path.join(full_destination_folder, file)
+        shutil.move(source_path, destination_path)
+        moved_files_count += 1
 
-                source_path = os.path.join(Current_Working_Directory, File)
-                destination_path = os.path.join(Current_Working_Directory, destination_folder, File)
+    return f"File organization complete. {moved_files_count} files moved."
 
-                shutil.move(source_path, destination_path)
-                print(f"Moved: {File} -> {destination_folder}")
-                moved_files_count += 1
-
-            print(f"\nTotal files moved: {moved_files_count}")
-            break
-
-else:
-    print("Aborting operation, terminating the operation.")
-    input("Press any key to exit the operation.")
+def organize_selected_files(files_list, files_extension_mapping):
+    moved_files_count = 0
+    for file_path in files_list:
+        if os.path.isfile(file_path):
+            directory, filename = os.path.split(file_path)
+            ext = filename.split('.')[-1]
+            destination_folder = files_extension_mapping.get(ext, "Miscilanious")
+            full_destination_folder = os.path.join(directory, destination_folder)
+            os.makedirs(full_destination_folder, exist_ok=True)
+            destination_path = os.path.join(full_destination_folder, filename)
+            shutil.move(file_path, destination_path)
+            moved_files_count += 1
+        else:
+            print(f"File not found: {file_path}")
+    return f"File organization complete. {moved_files_count} files moved."
